@@ -154,14 +154,29 @@ class GameLoop:
         - ghost_factory: hàm index -> Agent; nếu có, tự tạo 1 agent cho MỖI Ghost
           trong map (index 1..N) và nối vào sau danh sách agents.
         """
-        self.state = GameState()
-        self.agents = agents
+        self.map_file = map_file
+        self.initial_agents = list(agents)
         self.ui = ui
         self.max_turns = max_turns
-        self._load_map(map_file)
-        if ghost_factory is not None:
-            self.agents = list(agents) + [ghost_factory(i) for i in
-                                          range(1, len(self.state.ghosts_pos) + 1)]
+        self.ghost_factory = ghost_factory
+        self.reset()
+
+    def reset(self):
+        """Khởi động lại toàn bộ trạng thái game và các tác tử."""
+        self.state = GameState()
+        self._load_map(self.map_file)
+        self.agents = []
+        for a in self.initial_agents:
+            if hasattr(a, "reset"):
+                a.reset()
+            self.agents.append(a)
+        if self.ghost_factory is not None:
+            self.agents.extend([self.ghost_factory(i) for i in
+                                range(1, len(self.state.ghosts_pos) + 1)])
+        if hasattr(self.ui, "turn"):
+            self.ui.turn = 0
+        if hasattr(self.ui, "restart_requested"):
+            self.ui.restart_requested = False
 
     def _load_map(self, map_file):
         """Parse file text để khởi tạo tọa độ vật lý cho GameState."""
@@ -197,43 +212,56 @@ class GameLoop:
 
     def run(self):
         """Vòng lặp chính của trò chơi."""
-        # 1. Khởi tạo và vẽ frame đầu tiên
         self.ui.initialize()
-        self.ui.render(self.state)
 
-        # 2. Vòng lặp game diễn ra cho đến khi kết thúc (thắng/thua/vô nghiệm/...)
-        turn = 0
-        while not self._should_stop():
-            if self.max_turns is not None and turn >= self.max_turns:
-                self.state.end_game("max_turns")
-                break
-            turn += 1
+        while True:
+            # 1. Khởi tạo và vẽ frame đầu tiên
+            self.ui.render(self.state, is_pacman_move=False)
 
-            for agent_index, agent in enumerate(self.agents):
-                # Thoát vòng lặp tác tử nếu game đã kết thúc ở lượt đi trước đó
-                if self._should_stop():
+            # 2. Vòng lặp game diễn ra cho đến khi kết thúc (thắng/thua/vô nghiệm/...)
+            turn = 0
+            while not self._should_stop():
+                if getattr(self.ui, "restart_requested", False):
                     break
-
-                # a. Lấy action từ Agent tương ứng
-                action = agent.get_action(self.state)
-
-                # a'. Agent báo "bế tắc" (vô nghiệm / hết kế hoạch) -> dừng game,
-                #     KHÔNG tiếp tục vòng lặp với action STOP vô hạn.
-                reason = getattr(agent, "stuck_reason", None)
-                if agent_index == 0 and reason:
-                    self.state.end_game(reason)
+                if self.max_turns is not None and turn >= self.max_turns:
+                    self.state.end_game("max_turns")
                     break
+                turn += 1
 
-                # b. Cập nhật GameState mới
-                self.state = self.state.generate_successor(agent_index, action)
+                for agent_index, agent in enumerate(self.agents):
+                    # Thoát vòng lặp tác tử nếu game đã kết thúc ở lượt đi trước đó hoặc restart
+                    if self._should_stop() or getattr(self.ui, "restart_requested", False):
+                        break
 
-                # c. Vẽ UI
-                self.ui.render(self.state)
+                    # a. Lấy action từ Agent tương ứng
+                    action = agent.get_action(self.state)
 
-                # d. Người chơi yêu cầu thoát (CLI tương tác)
+                    # a'. Agent báo "bế tắc" (vô nghiệm / hết kế hoạch) -> dừng game,
+                    #     KHÔNG tiếp tục vòng lặp với action STOP vô hạn.
+                    reason = getattr(agent, "stuck_reason", None)
+                    if agent_index == 0 and reason:
+                        self.state.end_game(reason)
+                        break
+
+                    # b. Cập nhật GameState mới
+                    self.state = self.state.generate_successor(agent_index, action)
+
+                    # c. Vẽ UI
+                    self.ui.render(self.state, is_pacman_move=(agent_index == 0))
+
+                    # d. Người chơi yêu cầu thoát hoặc restart
+                    if getattr(self.ui, "quit_requested", False) or getattr(self.ui, "restart_requested", False):
+                        break
+
                 if getattr(self.ui, "quit_requested", False):
                     self.state.end_game("quit")
                     break
+
+            if getattr(self.ui, "restart_requested", False):
+                self.reset()
+                continue
+
+            break
 
         # 3. Kết thúc trò chơi và in kết quả
         print("-" * 30)

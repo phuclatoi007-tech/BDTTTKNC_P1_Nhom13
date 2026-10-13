@@ -1,3 +1,11 @@
-# Dự án chỉ dùng thư viện chuẩn của Python (argparse, heapq, collections, dataclasses...).
-# Không cần cài thêm package nào.
+# ==============================================================================
+# Pacman AI - Yêu cầu môi trường
+# ==============================================================================
+# Chế độ Terminal CLI mặc định:
+# Chỉ dùng thư viện chuẩn của Python (argparse, heapq, collections, dataclasses...).
+# Không bắt buộc cài thêm thư viện ngoài.
 # Yêu cầu: Python >= 3.8
+
+# Giao diện Đồ họa Desktop (GUI):
+# Cần thư viện pygame để mở cửa sổ đồ họa (tương thích mọi phiên bản Python kể cả 3.13, 3.14):
+pygame-ce>=2.5.0

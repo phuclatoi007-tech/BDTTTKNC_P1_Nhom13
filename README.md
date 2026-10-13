@@ -4,18 +4,20 @@ Trò chơi Pacman chạy trên terminal, có hai chế độ:
 
 | Chế độ | Thuật toán | Ghost |
 |---|---|---|
-| `search` | `bfs`, `dfs`, `ucs`, `astar` (heuristic: `mst`, `maze`, `null`) | đứng yên |
+| `search` | `bfs`, `dfs`, `ucs`, `greedy`, `astar` (heuristic: `mst`, `maze`, `null`) | đứng yên |
 | `adversarial` | `minimax`, `alphabeta` | đuổi theo Pacman (có xác suất đi ngẫu nhiên) |
 
 ## Yêu cầu
 
-- Python >= 3.8, **không cần cài thư viện ngoài** (xem `requirements.txt`).
+- Python >= 3.8, **không cần cài thư viện ngoài** cho CLI (xem `requirements.txt`).
 - Terminal hỗ trợ mã màu ANSI để hiển thị màu (có thể tắt bằng `-nocolor`).
+- Cài đặt `pygame` nếu muốn sử dụng giao diện đồ họa Desktop GUI: `pip install pygame`.
 
 ## Cách chạy
 
 ```bash
 # Tìm kiếm 1 mục tiêu / nhiều mục tiêu
+python main.py -mode search -map maps/map_co_ban.txt -algo greedy -heuristic mst
 python main.py -mode search -map maps/map_co_ban.txt -algo astar -heuristic mst
 python main.py -mode search -map maps/map_lon_2.txt -algo bfs
 
@@ -24,6 +26,13 @@ python main.py -mode adversarial -map maps/map_ghost.txt -algo alphabeta -depth 
 
 # Chạy từng bước (nhấn Enter để đi tiếp)
 python main.py -mode search -map maps/map_lon_1.txt -algo astar -step
+
+# Mở cửa sổ giao diện đồ họa trên màn hình Desktop (GUI)
+python main.py -mode search -map maps/map_co_ban.txt -algo astar -ui gui
+python main.py -mode adversarial -map maps/map_ghost.txt -algo minimax -depth 3 -ui gui
+
+# Chạy toàn bộ 12 bài kiểm thử (Unit Tests)
+python -m unittest discover tests
 ```
 
 ### Tham số
@@ -32,26 +41,27 @@ python main.py -mode search -map maps/map_lon_1.txt -algo astar -step
 |---|---|---|
 | `-mode` | `search` hoặc `adversarial` (bắt buộc) | - |
 | `-map` | đường dẫn file map (bắt buộc) | - |
-| `-algo` | thuật toán (xem bảng trên) | `astar` / `alphabeta` |
-| `-heuristic` | heuristic cho A*: `mst`, `maze`, `null` | `mst` |
+| `-algo` | thuật toán (`bfs`, `dfs`, `ucs`, `greedy`, `astar`, `minimax`, `alphabeta`) | `astar` / `alphabeta` |
+| `-heuristic` | heuristic cho A* và Greedy: `mst`, `maze`, `null` | `mst` |
 | `-depth` | độ sâu của minimax / alphabeta | `3` |
-| `-ui` | `cli` (tương tác) hoặc `dummy` (in thô) | `cli` |
+| `-ui` | `cli` (Terminal) hoặc `gui` (Cửa sổ Desktop Pygame) | `cli` |
 | `-delay` | giây nghỉ giữa các bước ở chế độ tự động | `0.15` |
 | `-step` | bắt đầu ở chế độ từng bước | tắt |
 | `-nocolor` | tắt màu ANSI | tắt |
 | `-seed` | seed ngẫu nhiên của Ghost (để tái lập kết quả) | ngẫu nhiên |
 | `-max_turns` | số vòng tối đa của chế độ adversarial | `200` |
 
-### Điều khiển giao diện CLI
+### Điều khiển giao diện (CLI & GUI)
 
 | Phím | Tác dụng |
 |---|---|
-| `Enter` / `n` | đi 1 bước (chế độ từng bước) |
+| `Enter` / `n` / `Space` | đi 1 bước (chế độ từng bước) |
 | `a` | chạy tự động |
-| `s` | quay lại chế độ từng bước |
+| `s` | quay lại chế độ từng bước (tạm dừng) |
+| `r` | khởi động lại ván chơi (Restart) |
 | `+` / `-` | tăng / giảm tốc độ |
-| `q` | thoát |
-| `Ctrl+C` | tạm dừng khi đang chạy tự động |
+| `q` / `Esc` | thoát |
+| `Ctrl+C` | tạm dừng khi đang chạy tự động trong CLI |
 
 Khi không chạy trong terminal thật (pipe, file) giao diện tự chạy tự động, không chờ nhập.
 
@@ -72,14 +82,17 @@ Ván kết thúc khi: thắng (ăn hết thức ăn), thua (chạm Ghost), **b�
 
 ```
 main.py                  điểm vào, đọc tham số dòng lệnh
-maps/                    các bản đồ
+maps/                    các bản đồ kiểm thử
+tests/                   bộ kiểm thử tự động (12 unit tests)
 src/engine.py            GameState (luật chơi) + GameLoop (vòng lặp game)
 src/agents.py            SearchAgent, MinimaxAgent, AlphaBetaAgent, Ghost agents
-src/search/algorithms.py general_graph_search + Frontier (DFS/BFS/UCS/A*)
+src/search/algorithms.py general_graph_search + Frontier (DFS/BFS/UCS/Greedy/A*)
+src/search/adversarial.py Minimax và Alpha-Beta Pruning cho GameTree
 src/search/heuristics.py heuristic: mst, maze, null
 src/search/problems.py   MultiFoodSearchProblem + cache khoảng cách mê cung (BFS)
-ui/base_ui.py            BaseUI + Dummy_CLI_UI
-ui/cli_ui.py             CLI_UI tương tác
+ui/base_ui.py            BaseUI trừu tượng
+ui/cli_ui.py             Giao diện Terminal (CLI)
+ui/g_ui.py               Giao diện Đồ họa Desktop (GUI Pygame)
 ```
 
 ## Ghi chú thiết kế

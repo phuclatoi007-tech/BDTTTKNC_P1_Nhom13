@@ -36,6 +36,7 @@ class CLI_UI(BaseUI):
         self.color = color and sys.stdout.isatty()
         self.clear = clear and sys.stdout.isatty()
         self.quit_requested = False
+        self.restart_requested = False
         self.turn = 0
 
     # --- vòng đời ------------------------------------------------------------
@@ -43,13 +44,15 @@ class CLI_UI(BaseUI):
         print("=== PACMAN - GIAO DIỆN DÒNG LỆNH ===")
         if self.interactive:
             print("Điều khiển: [Enter] bước tiếp | a: tự động | s: từng bước | "
-                  "+/-: tốc độ | q: thoát")
+                  "+/-: tốc độ | r: khởi động lại | q: thoát")
             if self.step_mode:
                 input("Nhấn Enter để bắt đầu...")
             else:
                 time.sleep(1.0)
 
-    def render(self, game_state):
+    def render(self, game_state, is_pacman_move=False):
+        if is_pacman_move:
+            self.turn += 1
         if self.clear:
             sys.stdout.write(CLEAR)
         print(self._header(game_state))
@@ -57,7 +60,6 @@ class CLI_UI(BaseUI):
             print(line)
         print(self._legend())
         sys.stdout.flush()
-        self.turn += 1
         self._wait_for_user(game_state)
 
     def show_metrics(self, metrics):
@@ -107,7 +109,15 @@ class CLI_UI(BaseUI):
 
     # --- tương tác --------------------------------------------------------------
     def _wait_for_user(self, state):
-        if state.is_game_over:             # ván đã xong: không chờ nữa
+        if state.is_game_over:             # ván đã xong: cho phép restart nếu tương tác
+            if not self.interactive:
+                return
+            try:
+                cmd = input("\n[r: Khởi động lại | Enter/q: Tiếp tục thoát] > ").strip().lower()
+                if cmd == "r":
+                    self.restart_requested = True
+            except (EOFError, KeyboardInterrupt):
+                pass
             return
         if not self.interactive:
             time.sleep(self.delay)
@@ -123,8 +133,8 @@ class CLI_UI(BaseUI):
 
         while True:                        # chế độ từng bước: chờ lệnh
             try:
-                cmd = input("[Enter] bước tiếp | a: tự động | +/-: tốc độ | "
-                            "q: thoát > ").strip().lower()
+                cmd = input("[Enter] bước tiếp | a: tự động | s: từng bước | +/-: tốc độ | "
+                            "r: khởi động lại | q: thoát > ").strip().lower()
             except (EOFError, KeyboardInterrupt):
                 cmd = "a"                  # hết input -> chạy tự động
             if cmd in ("", "n"):
@@ -134,6 +144,9 @@ class CLI_UI(BaseUI):
                 return
             if cmd == "s":
                 self.step_mode = True
+                return
+            if cmd == "r":
+                self.restart_requested = True
                 return
             if cmd == "+":
                 self.delay = max(MIN_DELAY, self.delay / 1.5)
