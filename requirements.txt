@@ -1,0 +1,3 @@
+# Dự án chỉ dùng thư viện chuẩn của Python (argparse, heapq, collections, dataclasses...).
+# Không cần cài thêm package nào.
+# Yêu cầu: Python >= 3.8

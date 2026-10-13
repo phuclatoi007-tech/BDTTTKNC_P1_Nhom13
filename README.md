@@ -1,0 +1,93 @@
+# Pacman AI - Nhóm 13
+
+Trò chơi Pacman chạy trên terminal, có hai chế độ:
+
+| Chế độ | Thuật toán | Ghost |
+|---|---|---|
+| `search` | `bfs`, `dfs`, `ucs`, `astar` (heuristic: `mst`, `maze`, `null`) | đứng yên |
+| `adversarial` | `minimax`, `alphabeta` | đuổi theo Pacman (có xác suất đi ngẫu nhiên) |
+
+## Yêu cầu
+
+- Python >= 3.8, **không cần cài thư viện ngoài** (xem `requirements.txt`).
+- Terminal hỗ trợ mã màu ANSI để hiển thị màu (có thể tắt bằng `-nocolor`).
+
+## Cách chạy
+
+```bash
+# Tìm kiếm 1 mục tiêu / nhiều mục tiêu
+python main.py -mode search -map maps/map_co_ban.txt -algo astar -heuristic mst
+python main.py -mode search -map maps/map_lon_2.txt -algo bfs
+
+# Đối kháng
+python main.py -mode adversarial -map maps/map_ghost.txt -algo alphabeta -depth 3 -seed 1
+
+# Chạy từng bước (nhấn Enter để đi tiếp)
+python main.py -mode search -map maps/map_lon_1.txt -algo astar -step
+```
+
+### Tham số
+
+| Tham số | Ý nghĩa | Mặc định |
+|---|---|---|
+| `-mode` | `search` hoặc `adversarial` (bắt buộc) | - |
+| `-map` | đường dẫn file map (bắt buộc) | - |
+| `-algo` | thuật toán (xem bảng trên) | `astar` / `alphabeta` |
+| `-heuristic` | heuristic cho A*: `mst`, `maze`, `null` | `mst` |
+| `-depth` | độ sâu của minimax / alphabeta | `3` |
+| `-ui` | `cli` (tương tác) hoặc `dummy` (in thô) | `cli` |
+| `-delay` | giây nghỉ giữa các bước ở chế độ tự động | `0.15` |
+| `-step` | bắt đầu ở chế độ từng bước | tắt |
+| `-nocolor` | tắt màu ANSI | tắt |
+| `-seed` | seed ngẫu nhiên của Ghost (để tái lập kết quả) | ngẫu nhiên |
+| `-max_turns` | số vòng tối đa của chế độ adversarial | `200` |
+
+### Điều khiển giao diện CLI
+
+| Phím | Tác dụng |
+|---|---|
+| `Enter` / `n` | đi 1 bước (chế độ từng bước) |
+| `a` | chạy tự động |
+| `s` | quay lại chế độ từng bước |
+| `+` / `-` | tăng / giảm tốc độ |
+| `q` | thoát |
+| `Ctrl+C` | tạm dừng khi đang chạy tự động |
+
+Khi không chạy trong terminal thật (pipe, file) giao diện tự chạy tự động, không chờ nhập.
+
+## Ký hiệu bản đồ
+
+`#` tường - `P` Pacman - `G` Ghost - `.` thức ăn - khoảng trắng: ô trống.
+
+Các map trong `maps/`: `map_co_ban`, `map_hep`, `map_dac_biet`, `map_lon_1`, `map_lon_2`,
+`map_ghost`, `map_ghost_lon`, `map_arena`, và hai map **không có lời giải**
+(`map_khong_loi_giai_pacman`, `map_khong_loi_giai_target`).
+
+## Kết thúc ván chơi
+
+Ván kết thúc khi: thắng (ăn hết thức ăn), thua (chạm Ghost), **bản đồ không có lời giải**
+(search báo `no_solution`, không bị treo), hết `-max_turns`, hoặc người chơi bấm `q`.
+
+## Cấu trúc thư mục
+
+```
+main.py                  điểm vào, đọc tham số dòng lệnh
+maps/                    các bản đồ
+src/engine.py            GameState (luật chơi) + GameLoop (vòng lặp game)
+src/agents.py            SearchAgent, MinimaxAgent, AlphaBetaAgent, Ghost agents
+src/search/algorithms.py general_graph_search + Frontier (DFS/BFS/UCS/A*)
+src/search/heuristics.py heuristic: mst, maze, null
+src/search/problems.py   MultiFoodSearchProblem + cache khoảng cách mê cung (BFS)
+ui/base_ui.py            BaseUI + Dummy_CLI_UI
+ui/cli_ui.py             CLI_UI tương tác
+```
+
+## Ghi chú thiết kế
+
+- **Search**: trạng thái = `(vị trí Pacman, tập thức ăn còn lại)`; mọi thuật toán dùng chung
+  `general_graph_search`, chỉ khác cấu trúc Frontier. A* + MST là admissible và consistent.
+  BFS/DFS/UCS trên map có rất nhiều thức ăn (vd `map_arena`, 41 thức ăn) sẽ bùng nổ không gian
+  trạng thái - hãy dùng `astar` hoặc chế độ `adversarial` cho map đó.
+- **Adversarial**: Pacman là MAX, các Ghost là MIN; một độ sâu = Pacman + toàn bộ Ghost đi một lượt.
+  `alphabeta` cho kết quả giống `minimax` nhưng mở rộng ít node hơn. Hàm đánh giá dùng điểm,
+  số thức ăn còn lại, khoảng cách mê cung tới thức ăn gần nhất và phạt khi Ghost quá gần.
