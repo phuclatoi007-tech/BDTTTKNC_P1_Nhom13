@@ -22,17 +22,17 @@ python main.py
 # Tìm kiếm 1 mục tiêu / nhiều mục tiêu trên Terminal (CLI)
 python main.py -mode search -map maps/map_co_ban.txt -algo greedy -heuristic mst
 python main.py -mode search -map maps/map_co_ban.txt -algo astar -heuristic mst
-python main.py -mode search -map maps/map_lon_2.txt -algo bfs
+python main.py -mode search -map maps/map2.txt -algo bfs
 
-# Đối kháng
-python main.py -mode adversarial -map maps/map_ghost.txt -algo alphabeta -depth 3 -seed 1
+# Đối kháng (map có Ghost)
+python main.py -mode adversarial -map maps/map_1ghost.txt -algo alphabeta -depth 3 -seed 1
 
 # Chạy từng bước (nhấn Enter để đi tiếp)
-python main.py -mode search -map maps/map_lon_1.txt -algo astar -step
+python main.py -mode search -map maps/map1.txt -algo astar -step
 
 # Mở cửa sổ giao diện đồ họa trên màn hình Desktop (GUI) với map cụ thể
 python main.py -mode search -map maps/map_co_ban.txt -algo astar -ui gui
-python main.py -mode adversarial -map maps/map_ghost.txt -algo minimax -depth 3 -ui gui
+python main.py -mode adversarial -map maps/map_1ghost.txt -algo minimax -depth 3 -ui gui
 
 # So sánh đường đi khác biệt rõ rệt giữa Greedy và A* (34 bước vs 44 bước)
 python main.py -mode search -map maps/map_greedy_vs_astar.txt -algo astar -ui cli
