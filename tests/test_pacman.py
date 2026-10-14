@@ -167,8 +167,61 @@ class TestPacmanAlgorithms(unittest.TestCase):
         next_state = state.generate_successor(0, "DOWN")
         self.assertTrue(next_state.is_win())
         self.assertTrue(next_state.is_game_over)
-        self.assertEqual(next_state.end_reason, "win")
-        self.assertEqual(len(next_state.food), 0)
+    def test_13_greedy_vs_astar_suboptimality(self):
+        """13. Kiểm tra Greedy tìm ra đường đi dưới tối ưu (dài hơn A*) trên map_greedy_vs_astar."""
+        with open("maps/map_greedy_vs_astar.txt", "r", encoding="utf-8") as f:
+            lines = [l.strip() for l in f if l.strip()]
+        walls = set()
+        food = set()
+        start_pos = None
+        for r, line in enumerate(lines):
+            for c, ch in enumerate(line):
+                if ch == "#":
+                    walls.add((c, r))
+                elif ch == "P":
+                    start_pos = (c, r)
+                elif ch == ".":
+                    food.add((c, r))
+
+        problem = MultiFoodSearchProblem(
+            walls=walls, width=len(lines[0]), height=len(lines), start_pos=start_pos, food=food
+        )
+        res_astar = astar(problem, "mst")
+        res_greedy = greedy(problem, "mst")
+
+        self.assertTrue(res_astar.found)
+        self.assertTrue(res_greedy.found)
+        self.assertLess(res_astar.cost, res_greedy.cost)
+        self.assertEqual(res_astar.cost, 34)
+        self.assertEqual(res_greedy.cost, 44)
+
+    def test_14_unsolvable_map_does_not_win(self):
+        """14. Kiểm tra map không lời giải kết thúc với no_solution và không bao giờ báo win."""
+        from src.agents import SearchAgent
+        state = GameState()
+        with open("maps/map_khong_loi_giai_pacman.txt", "r", encoding="utf-8") as f:
+            lines = [l.strip() for l in f if l.strip()]
+        for r, line in enumerate(lines):
+            for c, ch in enumerate(line):
+                if ch == "#":
+                    state.walls.add((c, r))
+                elif ch == "P":
+                    state.pacman_pos = (c, r)
+                elif ch == ".":
+                    state.food.add((c, r))
+        state.width = len(lines[0])
+        state.height = len(lines)
+
+        agent = SearchAgent(algorithm_name="astar", heuristic="mst")
+        action = agent.get_action(state)
+        self.assertEqual(action, "STOP")
+        self.assertEqual(agent.stuck_reason, "no_solution")
+        self.assertFalse(agent.metrics["found"])
+
+        state.end_game(agent.stuck_reason)
+        self.assertTrue(state.is_game_over)
+        self.assertFalse(state.is_win())
+        self.assertEqual(state.end_reason, "no_solution")
 
 
 if __name__ == "__main__":

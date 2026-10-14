@@ -1,6 +1,7 @@
 import argparse
 import sys
 import time
+import os
 
 if sys.platform == "win32":
     # Đảm bảo in tiếng Việt trên Windows console không bị lỗi charmap codec
@@ -24,26 +25,29 @@ from ui.cli_ui import CLI_UI
 
 
 def main():
+    # Xác định UI mặc định: nếu chạy không có tham số nào -> mở GUI đồ họa của Phúc
+    default_ui = "gui" if len(sys.argv) == 1 else "cli"
+
     # 1. Đọc tham số dòng lệnh
-    parser = argparse.ArgumentParser(description="Pacman Game - AI Search & Adversarial")
+    parser = argparse.ArgumentParser(description="Pacman Game - AI Search & Adversarial (Nhóm 13)")
     parser.add_argument(
         "-mode",
         type=str,
-        required=True,
+        default="search",
         choices=["search", "adversarial"],
-        help="Chế độ chơi: search hoặc adversarial",
+        help="Chế độ chơi: search hoặc adversarial (mặc định: search)",
     )
     parser.add_argument(
         "-map",
         type=str,
-        required=True,
-        help="Đường dẫn đến file map (vd: maps/map_co_ban.txt)",
+        default="maps/map_co_ban.txt",
+        help="Đường dẫn đến file map (mặc định: maps/map_co_ban.txt)",
     )
     parser.add_argument(
         "-algo",
         type=str,
         default=None,
-        help="Thuật toán (bfs, dfs, ucs, greedy, astar, minimax, alphabeta cho search; minimax, alphabeta cho adversarial)",
+        help="Thuật toán (bfs, dfs, ucs, greedy, astar, minimax, alphabeta)",
     )
     parser.add_argument(
         "-heuristic",
@@ -60,9 +64,9 @@ def main():
     parser.add_argument(
         "-ui",
         type=str,
-        default="cli",
+        default=default_ui,
         choices=["cli", "gui"],
-        help="Giao diện hiển thị: cli (Terminal) hoặc gui (Đồ họa Pygame)",
+        help=f"Giao diện hiển thị: cli (Terminal) hoặc gui (Đồ họa Pygame, mặc định: {default_ui})",
     )
     parser.add_argument(
         "-delay",
@@ -95,7 +99,26 @@ def main():
 
     args = parser.parse_args()
 
-    # Thiết lập giá trị mặc định theo chế độ nếu người dùng chưa chỉ định
+    # 2. Khởi động GUI Desktop đồ họa tương tác (Pygame) nếu chọn gui
+    if args.ui == "gui":
+        try:
+            from ui.g_ui import run_gui_app
+            run_gui_app(
+                initial_map=args.map if args.map else None,
+                initial_algo=args.algo if args.algo else None,
+                initial_heuristic=args.heuristic if args.heuristic else None,
+            )
+            return
+        except ImportError as e:
+            print(f"\n[LỖI] Không thể tải thư viện đồ họa Pygame: {e}")
+            print("Vui lòng cài đặt: pip install pygame-ce (hoặc pip install pygame)")
+            print("Chuyển tự động sang giao diện dòng lệnh (CLI)...\n")
+            args.ui = "cli"
+        except Exception as e:
+            print(f"\n[CẢNH BÁO] Không thể khởi động GUI ({e}). Chuyển sang CLI...\n")
+            args.ui = "cli"
+
+    # 3. Chế độ CLI (Terminal): Sử dụng GameLoop và CLI_UI
     if args.algo is None:
         args.algo = "astar" if args.mode.lower() == "search" else "alphabeta"
 
@@ -114,26 +137,14 @@ def main():
     if args.max_turns:
         print(f"- Số vòng tối đa (Max turns): {args.max_turns}")
 
-    # 2. Khởi tạo UI
-    if args.ui == "gui":
-        try:
-            from ui.g_ui import GUI_UI
-            ui = GUI_UI(delay=args.delay, step_mode=args.step)
-        except ImportError:
-            print("\n[LỖI] Không thể tải thư viện đồ họa.")
-            print("Vui lòng cài đặt Pygame bằng lệnh: pip install pygame")
-            print("Chuyển về giao diện CLI tự động...\n")
-            ui = CLI_UI(delay=args.delay, step_mode=args.step, color=not args.nocolor)
-    else:
-        ui = CLI_UI(delay=args.delay, step_mode=args.step, color=not args.nocolor)
+    ui = CLI_UI(delay=args.delay, step_mode=args.step, color=not args.nocolor)
 
-    # 3. Khởi tạo Agent cho Pacman và Factory cho Ghost
+    # 4. Khởi tạo Agent cho Pacman và Factory cho Ghost
     agents = []
     algo_lower = args.algo.lower().replace("-", "").replace("_", "")
 
     if args.mode.lower() == "search":
         if algo_lower in ("minimax", "alphabeta"):
-            # Hỗ trợ trực tiếp thuật toán đối kháng minimax/alphabeta trong search mode
             pacman_agent = SearchAgent(algorithm_name=algo_lower, depth=args.depth)
         elif algo_lower in ("bfs", "dfs", "astar", "ucs", "greedy", "gbfs"):
             pacman_agent = SearchAgent(algorithm_name=algo_lower, heuristic=args.heuristic)
@@ -142,7 +153,6 @@ def main():
             pacman_agent = SearchAgent(algorithm_name="astar", heuristic=args.heuristic)
 
         agents.append(pacman_agent)
-        # Trong chế độ search, ghost đứng yên
         ghost_factory = lambda i: DummyGhostAgent(index=i, random_move=False)
 
     elif args.mode.lower() == "adversarial":
@@ -155,14 +165,13 @@ def main():
             pacman_agent = AlphaBetaAgent(depth=args.depth)
 
         agents.append(pacman_agent)
-        # Trong chế độ đối kháng, ghost đuổi theo Pacman (có xác suất di chuyển ngẫu nhiên)
         ghost_factory = lambda i: ChaserGhostAgent(
             index=i,
             random_prob=0.2,
             seed=(args.seed + i) if args.seed is not None else None,
         )
 
-    # 4. Khởi tạo GameLoop với ghost_factory và max_turns
+    # 5. Khởi tạo GameLoop với ghost_factory và max_turns
     game = GameLoop(
         map_file=args.map,
         agents=agents,
@@ -171,10 +180,10 @@ def main():
         ghost_factory=ghost_factory,
     )
 
-    # 5. Chạy game
+    # 6. Chạy game
     game.run()
 
-    # 6. In kết quả (Metrics)
+    # 7. In kết quả (Metrics)
     if hasattr(pacman_agent, "get_metrics"):
         ui.show_metrics(pacman_agent.get_metrics())
 

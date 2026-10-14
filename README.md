@@ -16,7 +16,10 @@ Trò chơi Pacman chạy trên terminal, có hai chế độ:
 ## Cách chạy
 
 ```bash
-# Tìm kiếm 1 mục tiêu / nhiều mục tiêu
+# Khởi chạy nhanh: mở thẳng giao diện đồ họa tương tác (GUI)
+python main.py
+
+# Tìm kiếm 1 mục tiêu / nhiều mục tiêu trên Terminal (CLI)
 python main.py -mode search -map maps/map_co_ban.txt -algo greedy -heuristic mst
 python main.py -mode search -map maps/map_co_ban.txt -algo astar -heuristic mst
 python main.py -mode search -map maps/map_lon_2.txt -algo bfs
@@ -27,11 +30,15 @@ python main.py -mode adversarial -map maps/map_ghost.txt -algo alphabeta -depth 
 # Chạy từng bước (nhấn Enter để đi tiếp)
 python main.py -mode search -map maps/map_lon_1.txt -algo astar -step
 
-# Mở cửa sổ giao diện đồ họa trên màn hình Desktop (GUI)
+# Mở cửa sổ giao diện đồ họa trên màn hình Desktop (GUI) với map cụ thể
 python main.py -mode search -map maps/map_co_ban.txt -algo astar -ui gui
 python main.py -mode adversarial -map maps/map_ghost.txt -algo minimax -depth 3 -ui gui
 
-# Chạy toàn bộ 12 bài kiểm thử (Unit Tests)
+# So sánh đường đi khác biệt rõ rệt giữa Greedy và A* (34 bước vs 44 bước)
+python main.py -mode search -map maps/map_greedy_vs_astar.txt -algo astar -ui cli
+python main.py -mode search -map maps/map_greedy_vs_astar.txt -algo greedy -ui cli
+
+# Chạy toàn bộ 14 bài kiểm thử (Unit Tests)
 python -m unittest discover tests
 ```
 
@@ -39,12 +46,12 @@ python -m unittest discover tests
 
 | Tham số | Ý nghĩa | Mặc định |
 |---|---|---|
-| `-mode` | `search` hoặc `adversarial` (bắt buộc) | - |
-| `-map` | đường dẫn file map (bắt buộc) | - |
+| `-mode` | `search` hoặc `adversarial` | `search` |
+| `-map` | đường dẫn file map | `maps/map_co_ban.txt` |
 | `-algo` | thuật toán (`bfs`, `dfs`, `ucs`, `greedy`, `astar`, `minimax`, `alphabeta`) | `astar` / `alphabeta` |
 | `-heuristic` | heuristic cho A* và Greedy: `mst`, `maze`, `null` | `mst` |
 | `-depth` | độ sâu của minimax / alphabeta | `3` |
-| `-ui` | `cli` (Terminal) hoặc `gui` (Cửa sổ Desktop Pygame) | `cli` |
+| `-ui` | `cli` (Terminal) hoặc `gui` (Cửa sổ Desktop Pygame) | `gui` (nếu không truyền tham số) / `cli` |
 | `-delay` | giây nghỉ giữa các bước ở chế độ tự động | `0.15` |
 | `-step` | bắt đầu ở chế độ từng bước | tắt |
 | `-nocolor` | tắt màu ANSI | tắt |
