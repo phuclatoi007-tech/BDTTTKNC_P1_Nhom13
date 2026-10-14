@@ -672,9 +672,9 @@ class PacmanUI(BaseUI):
         self.screen.blit(overlay, (0, 0))
 
         messages = {
-            "WIN": ("🏆 CHIẾN THẮNG!", COLOR_WIN),
-            "LOSE": ("💀 GAME OVER!", COLOR_GAME_OVER),
-            "NO_PATH": ("❌ KHÔNG TÌM THẤY ĐƯỜNG!", COLOR_GAME_OVER),
+            "WIN": ("CHIẾN THẮNG!", COLOR_WIN),
+            "LOSE": ("GAME OVER!", COLOR_GAME_OVER),
+            "NO_PATH": ("KHÔNG TÌM THẤY ĐƯỜNG!", COLOR_GAME_OVER),
         }
         text, color = messages.get(self.game_result, ("KẾT THÚC", COLOR_TEXT_MAIN))
         t_surf = self.font_title.render(text, True, color)
