@@ -54,24 +54,6 @@ Tuy nhiên, khi đối chiếu từng câu chữ của đề bài trên trang No
 
 ---
 
-### 🔴 Lỗi 2: Sai lệch quy ước tên thư mục tài nguyên (`asset/` vs `assets/`)
-* **Vị trí:** Thư mục [`asset/`](file:///d:/BDTTTKNC_P1_Nhom13/asset) và dòng 30 trong [`ui/g_ui.py`](file:///d:/BDTTTKNC_P1_Nhom13/ui/g_ui.py#L30):
-  ```python
-  _ASSET_DIR = os.path.join(_PROJECT_ROOT, "asset")
-  ```
-* **Vấn đề:** 
-  - Trong **Mục 6 của đề bài Notion** (Cấu trúc thư mục đề xuất), thư mục bắt buộc có tên là:
-    ```text
-    ├── assets/                 ← hình ảnh/âm thanh, nếu có
-    ```
-  - Hiện tại nhóm đang đặt tên là `asset` (thiếu chữ `s`). Nếu giảng viên dùng script chấm tự động kiểm tra cấu trúc hoặc người dùng clone về đổi tên thành `assets`, giao diện GUI sẽ bị lỗi đường dẫn hình ảnh/font.
-* **Cách khắc phục:** Đổi tên thư mục thành `assets/` và cập nhật `_ASSET_DIR` trong `ui/g_ui.py` hỗ trợ fallback:
-  ```python
-  _ASSET_DIR = os.path.join(_PROJECT_ROOT, "assets") if os.path.exists(os.path.join(_PROJECT_ROOT, "assets")) else os.path.join(_PROJECT_ROOT, "asset")
-  ```
-
----
-
 ### 🟡 Lỗi 3: Chưa xuất "Đường đi / Danh sách hành động" trong Metrics tìm kiếm
 * **Vị trí:** [`src/agents.py`](file:///d:/BDTTTKNC_P1_Nhom13/src/agents.py#L68-L81) và [`ui/cli_ui.py`](file:///d:/BDTTTKNC_P1_Nhom13/ui/cli_ui.py#L65-L73).
 * **Vấn đề:**
