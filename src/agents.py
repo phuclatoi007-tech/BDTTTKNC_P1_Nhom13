@@ -27,10 +27,11 @@ class SearchAgent(Agent):
     hành động ra trả cho Game Engine.
     """
 
-    def __init__(self, algorithm_name="astar", heuristic=None):
+    def __init__(self, algorithm_name="astar", heuristic=None, depth=3):
         self.algorithm_name = normalize_algo_name(algorithm_name)
-        # A* mặc định dùng MST; các thuật toán mù không dùng heuristic
-        if self.algorithm_name == "astar":
+        self.depth = depth
+        # A* và Greedy dùng heuristic (mặc định MST); các thuật toán mù không dùng
+        if self.algorithm_name in ("astar", "greedy"):
             self.heuristic = heuristic if heuristic is not None else "mst"
         else:
             self.heuristic = None
@@ -39,6 +40,12 @@ class SearchAgent(Agent):
         # Khác None khi agent không còn gì để làm; GameLoop dựa vào đây để kết thúc
         # ván thay vì lặp STOP vô hạn: "no_solution" | "plan_exhausted"
         self.stuck_reason = None
+
+        self.adversarial_agent = None
+        if self.algorithm_name == "minimax":
+            self.adversarial_agent = MinimaxAgent(depth=self.depth)
+        elif self.algorithm_name == "alphabeta":
+            self.adversarial_agent = AlphaBetaAgent(depth=self.depth)
 
     # --- thông dịch GameState -> SearchProblem ------------------------------
     @staticmethod
@@ -54,7 +61,7 @@ class SearchAgent(Agent):
     def _plan_path(self, game_state):
         t0 = time.perf_counter()
         problem = self.build_problem(game_state)
-        result = run_search(self.algorithm_name, problem, self.heuristic)
+        result = run_search(self.algorithm_name, problem, self.heuristic, depth=self.depth)
         total = time.perf_counter() - t0
 
         self.plan = deque(result.actions)
@@ -74,6 +81,12 @@ class SearchAgent(Agent):
         }
 
     def get_action(self, game_state):
+        if self.adversarial_agent is not None:
+            action = self.adversarial_agent.get_action(game_state)
+            if getattr(self.adversarial_agent, "stuck_reason", None):
+                self.stuck_reason = self.adversarial_agent.stuck_reason
+            return action
+
         if self.plan is None:
             self._plan_path(game_state)
         if not self.plan:                # hết kế hoạch hoặc vô nghiệm
@@ -83,7 +96,16 @@ class SearchAgent(Agent):
         return self.plan.popleft()
 
     def get_metrics(self):
+        if self.adversarial_agent is not None:
+            return self.adversarial_agent.get_metrics()
         return dict(self.metrics)
+
+    def reset(self):
+        self.plan = None
+        self.metrics = {}
+        self.stuck_reason = None
+        if self.adversarial_agent is not None:
+            self.adversarial_agent.reset()
 
 
 class DummyGhostAgent(Agent):
@@ -160,6 +182,7 @@ class AdversarialAgent(Agent):
         self.moves = 0
         self.total_time = 0.0
         self.stuck_reason = None
+        self.last_eval_value = 0.0
 
     # --- hàm đánh giá --------------------------------------------------------
     def evaluate(self, state):
@@ -213,7 +236,7 @@ class AdversarialAgent(Agent):
             else:
                 best = min(best, v)
                 beta = min(beta, best)
-            if self.use_pruning and beta < alpha:           # cắt tỉa (nghiêm ngặt)
+            if self.use_pruning and beta <= alpha:          # cắt tỉa Alpha-Beta
                 break
         return best
 
@@ -242,6 +265,7 @@ class AdversarialAgent(Agent):
                 best_key, best_value, best_action = key, v, action
             alpha = max(alpha, best_value)
 
+        self.last_eval_value = best_value
         self.moves += 1
         self.total_time += time.perf_counter() - t0
         return best_action
@@ -251,10 +275,19 @@ class AdversarialAgent(Agent):
             "algorithm": "alphabeta" if self.use_pruning else "minimax",
             "depth": self.depth,
             "moves": self.moves,
+            "last_eval_value": self.last_eval_value,
             "expanded_nodes": self.expanded_nodes,
             "total_time": self.total_time,
             "avg_time_per_move": self.total_time / self.moves if self.moves else 0.0,
         }
+
+    def reset(self):
+        self._maze = None
+        self.expanded_nodes = 0
+        self.moves = 0
+        self.total_time = 0.0
+        self.stuck_reason = None
+        self.last_eval_value = 0.0
 
 
 class MinimaxAgent(AdversarialAgent):

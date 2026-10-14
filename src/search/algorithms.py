@@ -13,6 +13,7 @@ from collections import deque
 from dataclasses import dataclass, field
 
 from src.search.heuristics import get_heuristic
+from src.search.adversarial import minimax_search, alphabeta_search, AdversarialSearchResult
 
 
 # ---------------------------------------------------------------------------
@@ -198,6 +199,13 @@ def ucs(problem):
     return general_graph_search(problem, PriorityQueueFrontier(lambda n: n.g))
 
 
+def greedy(problem, heuristic="mst"):
+    h = get_heuristic(heuristic)
+    def priority(node):
+        return h(node.state, problem)
+    return general_graph_search(problem, PriorityQueueFrontier(priority))
+
+
 def astar(problem, heuristic="mst"):
     h = get_heuristic(heuristic)
     # f = g + h; hoà thì ưu tiên h nhỏ hơn (node gần đích hơn)
@@ -207,19 +215,125 @@ def astar(problem, heuristic="mst"):
     return general_graph_search(problem, PriorityQueueFrontier(priority))
 
 
-ALGORITHMS = {"dfs": dfs, "bfs": bfs, "ucs": ucs, "astar": astar}
+def problem_adversarial_search(problem, depth=3, heuristic="mst", use_pruning=True):
+    """
+    Áp dụng tìm kiếm cây đánh giá độ sâu (depth-limited evaluation search)
+    lên bài toán SearchProblem (khi không có GameState).
+    """
+    t0 = time.perf_counter()
+    result = SearchResult()
+    if not problem.is_solvable():
+        result.time = time.perf_counter() - t0
+        return result
+
+    h = get_heuristic(heuristic)
+
+    def eval_state(s):
+        return -h(s, problem)
+
+    def max_value(state, d, alpha, beta):
+        nonlocal expanded
+        if problem.is_goal(state) or d == 0:
+            return eval_state(state)
+        best = float("-inf")
+        for next_state, _, step_cost in problem.get_successors(state):
+            expanded += 1
+            v = max_value(next_state, d - 1, alpha, beta) - step_cost
+            best = max(best, v)
+            if use_pruning:
+                alpha = max(alpha, best)
+                if beta <= alpha:
+                    break
+        return best
+
+    current = problem.get_start_state()
+    actions = []
+    expanded = 0
+    total_cost = 0
+    max_steps = 1000
+    visited = {current}
+
+    while not problem.is_goal(current) and len(actions) < max_steps:
+        successors = problem.get_successors(current)
+        if not successors:
+            break
+        best_val = float("-inf")
+        best_act = None
+        best_nxt = None
+        best_cost = 1
+        for nxt, act, cost in successors:
+            expanded += 1
+            v = max_value(nxt, depth - 1, float("-inf"), float("inf")) - cost
+            if nxt in visited:
+                v -= 10  # Phạt tránh chu trình
+            if v > best_val:
+                best_val = v
+                best_act = act
+                best_nxt = nxt
+                best_cost = cost
+        if best_act is None:
+            break
+        actions.append(best_act)
+        total_cost += best_cost
+        current = best_nxt
+        visited.add(current)
+
+    result.found = problem.is_goal(current)
+    result.actions = actions
+    result.cost = total_cost
+    result.expanded = expanded
+    result.time = time.perf_counter() - t0
+    return result
+
+
+def minimax(target, depth=3, evaluation_fn=None, heuristic="mst"):
+    """
+    Thuật toán Minimax cho đối kháng (GameState) hoặc bài toán tìm kiếm (SearchProblem).
+    """
+    if hasattr(target, "generate_successor"):
+        return minimax_search(target, depth=depth, evaluation_fn=evaluation_fn)
+    return problem_adversarial_search(target, depth=depth, heuristic=heuristic, use_pruning=False)
+
+
+def alphabeta(target, depth=3, evaluation_fn=None, heuristic="mst"):
+    """
+    Thuật toán Alpha-Beta Pruning cho đối kháng (GameState) hoặc bài toán tìm kiếm (SearchProblem).
+    """
+    if hasattr(target, "generate_successor"):
+        return alphabeta_search(target, depth=depth, evaluation_fn=evaluation_fn)
+    return problem_adversarial_search(target, depth=depth, heuristic=heuristic, use_pruning=True)
+
+
+ALGORITHMS = {
+    "dfs": dfs,
+    "bfs": bfs,
+    "ucs": ucs,
+    "greedy": greedy,
+    "astar": astar,
+    "minimax": minimax,
+    "alphabeta": alphabeta,
+}
 
 
 def normalize_algo_name(name):
     key = str(name).lower().replace("*", "star").replace("-", "").replace("_", "")
+    if key in ("gbfs", "greedy", "greedybestfirst"):
+        return "greedy"
+    if key in ("mini_max", "minimax"):
+        return "minimax"
+    if key in ("alpha_beta", "alphabeta"):
+        return "alphabeta"
     if key not in ALGORITHMS:
         raise ValueError(f"Thuật toán không hợp lệ: {name!r}. Chọn: {list(ALGORITHMS)}")
     return key
 
 
-def run_search(algo_name, problem, heuristic=None):
+def run_search(algo_name, problem, heuristic=None, depth=3):
     """Điểm vào thống nhất: chạy thuật toán theo tên."""
     key = normalize_algo_name(algo_name)
-    if key == "astar":
-        return astar(problem, heuristic if heuristic is not None else "mst")
+    if key in ("astar", "greedy"):
+        return ALGORITHMS[key](problem, heuristic if heuristic is not None else "mst")
+    if key in ("minimax", "alphabeta"):
+        return ALGORITHMS[key](problem, depth=depth, heuristic=heuristic if heuristic is not None else "mst")
     return ALGORITHMS[key](problem)
+
