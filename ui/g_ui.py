@@ -753,7 +753,7 @@ class PacmanUI(BaseUI):
 
         st = self.metrics.get("status", "Sẵn sàng")
         st_col = (COLOR_WIN if "Hoàn thành" in st or "chiến thắng" in st
-                  else COLOR_GAME_OVER if ("❌" in st or "Lỗi" in st or "bị ma bắt" in st)
+                  else COLOR_GAME_OVER if ("Lỗi" in st or "bị ma bắt" in st)
                   else COLOR_ACCENT)
         st_surf = self.font_bold.render(st, True, st_col)
         self.screen.blit(st_surf, (px + 12, card_rect.bottom - 26))
@@ -961,8 +961,8 @@ def run_gui_app(initial_map=None, initial_algo=None, initial_heuristic=None):
             ui.sync_from_engine(turn_game_state)
             ui.phase, ui.is_running = "GAME_OVER", False
             ui.game_result = "WIN" if turn_game_state.end_reason == "win" else "LOSE"
-            msg = ("🏆 Pacman chiến thắng!" if ui.game_result == "WIN"
-                   else "💀 Pacman bị ma bắt!" if turn_game_state.end_reason == "ghost"
+            msg = ("Pacman chiến thắng!" if ui.game_result == "WIN"
+                   else "Pacman bị ma bắt!" if turn_game_state.end_reason == "ghost"
                    else "Hết lượt đi tối đa!")
             ui.metrics["status"] = msg
             return True
@@ -1023,7 +1023,7 @@ def run_gui_app(initial_map=None, initial_algo=None, initial_heuristic=None):
 
         if not m.get("found", False) or not demo_path:
             ui.phase, ui.game_result, ui.is_running = "GAME_OVER", "NO_PATH", False
-            ui.metrics["status"] = "❌ Không tìm thấy đường đi!"
+            ui.metrics["status"] = "Không tìm thấy đường đi!"
             return False
 
         search_step_idx = 0
@@ -1053,10 +1053,10 @@ def run_gui_app(initial_map=None, initial_algo=None, initial_heuristic=None):
             return True
         if ui.food_set and ui.eaten_food >= ui.food_set:
             ui.phase, ui.game_result, ui.is_running = "GAME_OVER", "WIN", False
-            ui.set_metrics(status="🏆 Hoàn thành! Pacman ăn hết thức ăn!")
+            ui.set_metrics(status="Hoàn thành! Pacman ăn hết thức ăn!")
         else:
             ui.phase, ui.game_result, ui.is_running = "GAME_OVER", "NO_PATH", False
-            ui.set_metrics(status="❌ Không tìm thấy đường đi!")
+            ui.set_metrics(status="Không tìm thấy đường đi!")
         return False
 
     # ── VÒNG LẶP CHÍNH CỦA ỨNG DỤNG (Main Loop) ──────────────────────────────
@@ -1113,7 +1113,7 @@ def run_gui_app(initial_map=None, initial_algo=None, initial_heuristic=None):
                         ui.set_metrics(cost=len(demo_path) - 1, status="Tìm thấy đường! Đang di chuyển...")
                     else:
                         ui.phase, ui.game_result, ui.is_running = "GAME_OVER", "NO_PATH", False
-                        ui.set_metrics(status="❌ Không tìm thấy đường đi!")
+                        ui.set_metrics(status="Không tìm thấy đường đi!")
             elif ui.phase == "MOVING":
                 advance_moving_step()
             elif ui.phase == "TURN_BASED":
