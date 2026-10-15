@@ -13,33 +13,21 @@ Trò chơi Pacman chạy trên terminal, có hai chế độ:
 - Terminal hỗ trợ mã màu ANSI để hiển thị màu (có thể tắt bằng `-nocolor`).
 - Cài đặt `pygame` nếu muốn sử dụng giao diện đồ họa Desktop GUI: `pip install pygame`.
 
-## Cách chạy
+## Cấu trúc thư mục
 
-```bash
-# Khởi chạy nhanh: mở thẳng giao diện đồ họa tương tác (GUI)
-python main.py
-
-# Tìm kiếm 1 mục tiêu / nhiều mục tiêu trên Terminal (CLI)
-python main.py -mode search -map maps/map_co_ban.txt -algo greedy -heuristic mst
-python main.py -mode search -map maps/map_co_ban.txt -algo astar -heuristic mst
-python main.py -mode search -map maps/map2.txt -algo bfs
-
-# Đối kháng (map có Ghost)
-python main.py -mode adversarial -map maps/map_1ghost.txt -algo alphabeta -depth 3 -seed 1
-
-# Chạy từng bước (nhấn Enter để đi tiếp)
-python main.py -mode search -map maps/map1.txt -algo astar -step
-
-# Mở cửa sổ giao diện đồ họa trên màn hình Desktop (GUI) với map cụ thể
-python main.py -mode search -map maps/map_co_ban.txt -algo astar -ui gui
-python main.py -mode adversarial -map maps/map_1ghost.txt -algo minimax -depth 3 -ui gui
-
-# So sánh đường đi khác biệt rõ rệt giữa Greedy và A* (34 bước vs 44 bước)
-python main.py -mode search -map maps/map_greedy_vs_astar.txt -algo astar -ui cli
-python main.py -mode search -map maps/map_greedy_vs_astar.txt -algo greedy -ui cli
-
-# Chạy toàn bộ 14 bài kiểm thử (Unit Tests)
-python -m unittest discover tests
+```
+main.py                  điểm vào, đọc tham số dòng lệnh
+maps/                    các bản đồ kiểm thử
+tests/                   bộ kiểm thử tự động (12 unit tests)
+src/engine.py            GameState (luật chơi) + GameLoop (vòng lặp game)
+src/agents.py            SearchAgent, MinimaxAgent, AlphaBetaAgent, Ghost agents
+src/search/algorithms.py general_graph_search + Frontier (DFS/BFS/UCS/Greedy/A*)
+src/search/adversarial.py Minimax và Alpha-Beta Pruning cho GameTree
+src/search/heuristics.py heuristic: mst, maze, null
+src/search/problems.py   MultiFoodSearchProblem + cache khoảng cách mê cung (BFS)
+ui/base_ui.py            BaseUI trừu tượng
+ui/cli_ui.py             Giao diện Terminal (CLI)
+ui/g_ui.py               Giao diện Đồ họa Desktop (GUI Pygame)
 ```
 
 ### Tham số
@@ -58,6 +46,38 @@ python -m unittest discover tests
 | `-seed` | seed ngẫu nhiên của Ghost (để tái lập kết quả) | ngẫu nhiên |
 | `-max_turns` | số vòng tối đa của chế độ adversarial | `200` |
 
+``
+## Cách chạy
+
+```bash
+# Khởi chạy nhanh: mở thẳng giao diện đồ họa tương tác (GUI)
+python main.py
+
+# Chạy bằng terminal
+python main.py -mode <mode_type> -map <map_url> -algo <algorithm> -heuristic <heuristic_type> -depth <do_sau> -ui <gui/cli> 
+    # Các tham số khác không cần thiết phải điều chỉnh
+
+# Chạy thực nghiệm
+  # Chạy file run_experiments.py  
+    
+    # Trường hợp đặc biệt
+    python main.py -mode search -map maps/map_co_ban.txt -algo bfs -ui cli
+    python main.py -mode search -map maps/map_dac_biet.txt -algo bfs -ui cli
+    python main.py -mode adversarial -map maps/map_dac_biet.txt -algo minimax -ui cli
+
+# Chạy kiểm tra tính đúng đắn của chương trình
+python -m unittest discover tests
+```
+
+## Ký hiệu bản đồ
+
+`#` tường - `P` Pacman - `G` Ghost - `.` thức ăn - khoảng trắng: ô trống.
+
+Các map trong `maps/`: `map_co_ban`, `map_hep`, `map_dac_biet`, `map_lon_1`, `map_lon_2`,
+`map_ghost`, `map_ghost_lon`, `map_arena`, và hai map **không có lời giải**
+(`map_khong_loi_giai_pacman`, `map_khong_loi_giai_target`).
+
+
 ### Điều khiển giao diện (CLI & GUI)
 
 | Phím | Tác dụng |
@@ -72,35 +92,11 @@ python -m unittest discover tests
 
 Khi không chạy trong terminal thật (pipe, file) giao diện tự chạy tự động, không chờ nhập.
 
-## Ký hiệu bản đồ
-
-`#` tường - `P` Pacman - `G` Ghost - `.` thức ăn - khoảng trắng: ô trống.
-
-Các map trong `maps/`: `map_co_ban`, `map_hep`, `map_dac_biet`, `map_lon_1`, `map_lon_2`,
-`map_ghost`, `map_ghost_lon`, `map_arena`, và hai map **không có lời giải**
-(`map_khong_loi_giai_pacman`, `map_khong_loi_giai_target`).
-
 ## Kết thúc ván chơi
 
 Ván kết thúc khi: thắng (ăn hết thức ăn), thua (chạm Ghost), **bản đồ không có lời giải**
 (search báo `no_solution`, không bị treo), hết `-max_turns`, hoặc người chơi bấm `q`.
 
-## Cấu trúc thư mục
-
-```
-main.py                  điểm vào, đọc tham số dòng lệnh
-maps/                    các bản đồ kiểm thử
-tests/                   bộ kiểm thử tự động (12 unit tests)
-src/engine.py            GameState (luật chơi) + GameLoop (vòng lặp game)
-src/agents.py            SearchAgent, MinimaxAgent, AlphaBetaAgent, Ghost agents
-src/search/algorithms.py general_graph_search + Frontier (DFS/BFS/UCS/Greedy/A*)
-src/search/adversarial.py Minimax và Alpha-Beta Pruning cho GameTree
-src/search/heuristics.py heuristic: mst, maze, null
-src/search/problems.py   MultiFoodSearchProblem + cache khoảng cách mê cung (BFS)
-ui/base_ui.py            BaseUI trừu tượng
-ui/cli_ui.py             Giao diện Terminal (CLI)
-ui/g_ui.py               Giao diện Đồ họa Desktop (GUI Pygame)
-```
 
 ## Ghi chú thiết kế
 
@@ -111,3 +107,6 @@ ui/g_ui.py               Giao diện Đồ họa Desktop (GUI Pygame)
 - **Adversarial**: Pacman là MAX, các Ghost là MIN; một độ sâu = Pacman + toàn bộ Ghost đi một lượt.
   `alphabeta` cho kết quả giống `minimax` nhưng mở rộng ít node hơn. Hàm đánh giá dùng điểm,
   số thức ăn còn lại, khoảng cách mê cung tới thức ăn gần nhất và phạt khi Ghost quá gần.
+
+# Hạn chế
+
