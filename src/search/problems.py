@@ -74,13 +74,16 @@ class MazeDistanceCache:
         return dist
 
     def distance(self, a, b):
-        """Khoảng cách (số bước) ngắn nhất a -> b; INF nếu không tới được.
-        Ít nhất một trong hai điểm phải là điểm quan tâm."""
+        """Khoảng cách (số bước) ngắn nhất a -> b; INF nếu không tới được."""
+        if a == b:
+            return 0
         if a in self._maps:
             return self._maps[a].get(b, INF)
         if b in self._maps:
             return self._maps[b].get(a, INF)
-        raise KeyError(f"Không có BFS-map cho {a} và {b}")
+        # Tính lười (lazy BFS) nếu cả a và b đều chưa nằm trong tập nguồn ban đầu
+        self._maps[a] = self._bfs(a)
+        return self._maps[a].get(b, INF)
 
 
 class MultiFoodSearchProblem(SearchProblem):
@@ -90,7 +93,7 @@ class MultiFoodSearchProblem(SearchProblem):
     Tham số:
         walls, width, height : bản đồ (ô ngoài biên coi như tường)
         start_pos            : vị trí ban đầu của Pacman
-        food                 : iterable các toạ độ thức ăn
+        food                 : iterable các toạ độ thức ăn hoặc dict {(x, y): value}
         cost_fn              : (pos, action, new_pos) -> chi phí >= 0 (mặc định 1)
         min_step_cost        : cận dưới của chi phí 1 bước, dùng để giữ heuristic
                                admissible khi cost_fn khác 1 (mặc định 1)
@@ -102,7 +105,14 @@ class MultiFoodSearchProblem(SearchProblem):
         self.width = width
         self.height = height
         self.start_pos = start_pos
-        self.initial_food = frozenset(food)
+
+        if isinstance(food, dict):
+            self.food_values = {pos: float(val) for pos, val in food.items() if val > 0}
+            self.initial_food = frozenset(self.food_values.keys())
+        else:
+            self.initial_food = frozenset(food)
+            self.food_values = {pos: 1.0 for pos in self.initial_food}
+
         self.cost_fn = cost_fn
         self.min_step_cost = min_step_cost if cost_fn else 1
 

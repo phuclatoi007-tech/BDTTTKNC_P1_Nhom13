@@ -1,7 +1,6 @@
-
 class GameState:
     """Biểu diễn trạng thái vật lý của bàn chơi tại một thời điểm."""
-    
+
     def __init__(self):
         # Khởi tạo kích thước và các tập hợp thực thể trên bản đồ
         self.width = 0
@@ -9,9 +8,11 @@ class GameState:
         self.walls = set()        # Tập hợp tọa độ (x, y) của tường
         self.pacman_pos = None    # Tọa độ (x, y) của Pacman
         self.ghosts_pos = []      # Danh sách tọa độ (x, y) của các Ghost
-        self.food = set()         # Tập hợp tọa độ (x, y) của thức ăn
+        self.food = set()         # Tập hợp tọa độ (x, y) của thức ăn (hoặc dict {(x, y): value})
+        self.food_values = {}     # Dict {(x, y): điểm_thức_ăn > 0} (mặc định 10 cho mỗi viên '.')
+        self.default_food_value = 10
         self.score = 0
-        
+
         # Cờ trạng thái kết thúc
         self.is_game_over = False
         self.win = False
@@ -19,6 +20,14 @@ class GameState:
         # Lý do kết thúc: "win" | "lose" | "no_solution" | "plan_exhausted"
         #                 | "max_turns" | "quit" | None (đang chơi)
         self.end_reason = None
+
+    def get_food_value(self, pos):
+        """Trả về giá trị điểm dương của viên thức ăn tại toạ độ pos."""
+        if isinstance(self.food, dict) and pos in self.food:
+            return self.food[pos]
+        if self.food_values and pos in self.food_values:
+            return self.food_values[pos]
+        return self.default_food_value
 
     def copy(self):
         """
@@ -28,7 +37,9 @@ class GameState:
         """
         new = GameState.__new__(GameState)
         new.__dict__.update(self.__dict__)
-        new.food = set(self.food)
+        new.food = dict(self.food) if isinstance(self.food, dict) else set(self.food)
+        if self.food_values:
+            new.food_values = dict(self.food_values)
         new.ghosts_pos = list(self.ghosts_pos)
         return new
 
@@ -36,7 +47,7 @@ class GameState:
         """Trả về các bước đi hợp lệ (không đâm tường) cho Pacman hoặc Ghost."""
         if self.is_win() or self.is_lose():
             return []
-            
+
         # Xác định vị trí hiện tại của tác tử (agent) đang xét
         if agent_index == 0:  # Pacman luôn có index = 0
             x, y = self.pacman_pos
@@ -45,7 +56,7 @@ class GameState:
             if ghost_idx >= len(self.ghosts_pos):
                 return []
             x, y = self.ghosts_pos[ghost_idx]
-            
+
         legal_actions = []
         # Các hướng di chuyển có thể (dx, dy)
         directions = {
@@ -55,13 +66,14 @@ class GameState:
             'RIGHT': (1, 0),
             'STOP': (0, 0)
         }
-        
+
         for action, (dx, dy) in directions.items():
             next_x, next_y = x + dx, y + dy
-            # Nếu vị trí tiếp theo không phải là tường và nằm trong bản đồ
-            if (next_x, next_y) not in self.walls:
+            # Nếu vị trí tiếp theo nằm trong bản đồ và không phải là tường
+            if (0 <= next_x < self.width and 0 <= next_y < self.height
+                    and (next_x, next_y) not in self.walls):
                 legal_actions.append(action)
-                
+
         return legal_actions
 
     def generate_successor(self, agent_index, action):
@@ -69,10 +81,10 @@ class GameState:
         # TẠO BẢN SAO ĐỘC LẬP: cực kỳ quan trọng cho Minimax Tree Search, tránh làm
         # hỏng trạng thái ván thật khi AI đang "tưởng tượng" tương lai.
         successor = self.copy()
-        
+
         if action == 'STOP' or action not in successor.get_legal_actions(agent_index):
             return successor
-            
+
         directions = {
             'UP': (0, -1),
             'DOWN': (0, 1),
@@ -80,27 +92,31 @@ class GameState:
             'RIGHT': (1, 0)
         }
         dx, dy = directions.get(action, (0, 0))
-        
+
         if agent_index == 0:  # Lượt di chuyển của Pacman
             curr_x, curr_y = successor.pacman_pos
             next_pos = (curr_x + dx, curr_y + dy)
             successor.pacman_pos = next_pos
-            
-            # Cập nhật điểm và thức ăn
+
+            # Cập nhật điểm và thức ăn (mọi thức ăn ăn được trước khi bị bắt đều tính điểm)
             if next_pos in successor.food:
-                successor.food.remove(next_pos)
-                successor.score += 10  # Điểm thưởng khi ăn được thức ăn
-                
-            successor.score -= 1       # Trừ điểm mỗi bước đi để khuyến khích AI tìm đường ngắn nhất
-            
+                food_val = successor.get_food_value(next_pos)
+                if isinstance(successor.food, dict):
+                    del successor.food[next_pos]
+                else:
+                    successor.food.remove(next_pos)
+                if successor.food_values and next_pos in successor.food_values:
+                    del successor.food_values[next_pos]
+                successor.score += food_val
+
         else:  # Lượt di chuyển của Ghost
             ghost_idx = agent_index - 1
             curr_x, curr_y = successor.ghosts_pos[ghost_idx]
             successor.ghosts_pos[ghost_idx] = (curr_x + dx, curr_y + dy)
-            
+
         # Kiểm tra trạng thái game (thắng/thua) sau mỗi lần cập nhật
         successor._update_game_status()
-        
+
         return successor
 
     def _update_game_status(self):
@@ -128,6 +144,7 @@ class GameState:
         """Kết thúc ván chơi không do thắng/thua (vô nghiệm, hết lượt, thoát...)."""
         self.is_game_over = True
         self.end_reason = reason
+
 
 class GameLoop:
     """Quản lý luồng chạy của game."""
@@ -197,6 +214,13 @@ class GameLoop:
                         self.state.ghosts_pos.append((x, y))
                     elif char == '.':
                         self.state.food.add((x, y))
+                        self.state.food_values[(x, y)] = 10
+                    elif char in ('o', 'O'):
+                        self.state.food.add((x, y))
+                        self.state.food_values[(x, y)] = 50
+                    elif char.isdigit() and int(char) > 0:
+                        self.state.food.add((x, y))
+                        self.state.food_values[(x, y)] = int(char) * 10
         except FileNotFoundError:
             print(f"[Error] Không tìm thấy file map: {map_file}")
             exit(1)

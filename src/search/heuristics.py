@@ -27,7 +27,11 @@ def _mst_cost(foods, problem):
         best = {n: dist(nodes[0], n) for n in nodes[1:]}
         while best:
             nxt = min(best, key=best.get)
-            total += best.pop(nxt)
+            cost = best.pop(nxt)
+            if cost == INF:
+                memo[foods] = INF
+                return INF
+            total += cost
             for n in best:
                 d = dist(nxt, n)
                 if d < best[n]:
@@ -51,7 +55,45 @@ def mst_heuristic(state, problem):
     d_min = min(dist(f, pos) for f in foods)
     if d_min == INF:
         return INF
-    return (d_min + _mst_cost(foods, problem)) * problem.min_step_cost
+    mst = _mst_cost(foods, problem)
+    if mst == INF:
+        return INF
+    return (d_min + mst) * problem.min_step_cost
+
+
+def theory_mst_heuristic(state, problem):
+    """
+    h(n) = MST({pos} U foods).
+    Cài đặt chuẩn lý thuyết: Gộp chung vị trí Pacman và thức ăn thành 1 đồ thị.
+    Không dùng cache vì 'pos' thay đổi liên tục ở mỗi bước đi.
+    """
+    pos, foods = state
+    if not foods:
+        return 0
+
+    dist = problem.distance_cache.distance
+    nodes = [pos] + list(foods)  # G_A = {p} U F
+
+    total = 0
+    # Khởi tạo khoảng cách từ 'pos' đến tất cả các đỉnh 'foods'
+    best = {n: dist(pos, n) for n in nodes[1:]}
+
+    # Thuật toán Prim tối ưu bằng Dictionary
+    while best:
+        nxt = min(best, key=best.get)
+        cost = best.pop(nxt)
+
+        if cost == INF:
+            return INF  # Cắt tỉa ngay nếu có thức ăn không thể tới được
+
+        total += cost
+        # Cập nhật lại khoảng cách ngắn nhất cho các đỉnh chưa thăm
+        for n in best:
+            d = dist(nxt, n)
+            if d < best[n]:
+                best[n] = d
+
+    return total * problem.min_step_cost
 
 
 def farthest_food_heuristic(state, problem):
@@ -65,7 +107,8 @@ def farthest_food_heuristic(state, problem):
 
 HEURISTICS = {
     "null": null_heuristic,
-    "mst": mst_heuristic,
+    "mst": mst_heuristic,               # Code cũ có cache của đồng đội
+    "theory_mst": theory_mst_heuristic, # Code mới chuẩn lý thuyết của bạn
     "maze": farthest_food_heuristic,
 }
 

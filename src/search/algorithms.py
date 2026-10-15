@@ -13,7 +13,12 @@ from collections import deque
 from dataclasses import dataclass, field
 
 from src.search.heuristics import get_heuristic
-from src.search.adversarial import minimax_search, alphabeta_search, AdversarialSearchResult
+from src.search.adversarial import (
+    minimax_search,
+    alphabeta_search,
+    get_maze_distance,
+    AdversarialSearchResult,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -215,7 +220,7 @@ def astar(problem, heuristic="mst"):
     return general_graph_search(problem, PriorityQueueFrontier(priority))
 
 
-def problem_adversarial_search(problem, depth=3, heuristic="mst", use_pruning=True):
+def problem_adversarial_search(problem, depth=4, heuristic="mst", use_pruning=True):
     """
     Áp dụng tìm kiếm cây đánh giá độ sâu (depth-limited evaluation search)
     lên bài toán SearchProblem (khi không có GameState).
@@ -238,7 +243,8 @@ def problem_adversarial_search(problem, depth=3, heuristic="mst", use_pruning=Tr
         best = float("-inf")
         for next_state, _, step_cost in problem.get_successors(state):
             expanded += 1
-            v = max_value(next_state, d - 1, alpha, beta) - step_cost
+            child_alpha = alpha + step_cost if use_pruning and alpha != float("-inf") else float("-inf")
+            v = max_value(next_state, d - 1, child_alpha, beta) - step_cost
             best = max(best, v)
             if use_pruning:
                 alpha = max(alpha, best)
@@ -261,9 +267,11 @@ def problem_adversarial_search(problem, depth=3, heuristic="mst", use_pruning=Tr
         best_act = None
         best_nxt = None
         best_cost = 1
+        alpha = float("-inf")
         for nxt, act, cost in successors:
             expanded += 1
-            v = max_value(nxt, depth - 1, float("-inf"), float("inf")) - cost
+            child_alpha = alpha + cost if use_pruning and alpha != float("-inf") else float("-inf")
+            v = max_value(nxt, depth - 1, child_alpha, float("inf")) - cost
             if nxt in visited:
                 v -= 10  # Phạt tránh chu trình
             if v > best_val:
@@ -271,6 +279,8 @@ def problem_adversarial_search(problem, depth=3, heuristic="mst", use_pruning=Tr
                 best_act = act
                 best_nxt = nxt
                 best_cost = cost
+            if use_pruning:
+                alpha = max(alpha, best_val)
         if best_act is None:
             break
         actions.append(best_act)
@@ -286,21 +296,27 @@ def problem_adversarial_search(problem, depth=3, heuristic="mst", use_pruning=Tr
     return result
 
 
-def minimax(target, depth=3, evaluation_fn=None, heuristic="mst"):
+def minimax(target, depth=4, evaluation_fn=None, heuristic="mst", maze_distance=None, agent_index=0):
     """
     Thuật toán Minimax cho đối kháng (GameState) hoặc bài toán tìm kiếm (SearchProblem).
     """
     if hasattr(target, "generate_successor"):
-        return minimax_search(target, depth=depth, evaluation_fn=evaluation_fn)
+        md = get_maze_distance(target, maze_distance)
+        return minimax_search(
+            target, depth=depth, evaluation_fn=evaluation_fn, maze_distance=md, agent_index=agent_index
+        )
     return problem_adversarial_search(target, depth=depth, heuristic=heuristic, use_pruning=False)
 
 
-def alphabeta(target, depth=3, evaluation_fn=None, heuristic="mst"):
+def alphabeta(target, depth=4, evaluation_fn=None, heuristic="mst", maze_distance=None, agent_index=0):
     """
     Thuật toán Alpha-Beta Pruning cho đối kháng (GameState) hoặc bài toán tìm kiếm (SearchProblem).
     """
     if hasattr(target, "generate_successor"):
-        return alphabeta_search(target, depth=depth, evaluation_fn=evaluation_fn)
+        md = get_maze_distance(target, maze_distance)
+        return alphabeta_search(
+            target, depth=depth, evaluation_fn=evaluation_fn, maze_distance=md, agent_index=agent_index
+        )
     return problem_adversarial_search(target, depth=depth, heuristic=heuristic, use_pruning=True)
 
 
@@ -328,7 +344,7 @@ def normalize_algo_name(name):
     return key
 
 
-def run_search(algo_name, problem, heuristic=None, depth=3):
+def run_search(algo_name, problem, heuristic=None, depth=4):
     """Điểm vào thống nhất: chạy thuật toán theo tên."""
     key = normalize_algo_name(algo_name)
     if key in ("astar", "greedy"):
@@ -336,4 +352,3 @@ def run_search(algo_name, problem, heuristic=None, depth=3):
     if key in ("minimax", "alphabeta"):
         return ALGORITHMS[key](problem, depth=depth, heuristic=heuristic if heuristic is not None else "mst")
     return ALGORITHMS[key](problem)
-

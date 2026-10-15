@@ -53,7 +53,7 @@ def main():
         "-heuristic",
         type=str,
         default="mst",
-        help="Heuristic sử dụng cho A* và Greedy (mst, maze, null)",
+        help="Heuristic sử dụng cho A* và Greedy (mst, theory_mst, maze, null)",
     )
     parser.add_argument(
         "-depth",
