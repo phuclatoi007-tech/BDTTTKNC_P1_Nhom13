@@ -10,7 +10,7 @@ Trò chơi Pacman chạy trên terminal, có hai chế độ:
 
 | Chế độ | Thuật toán | Ghost |
 |---|---|---|
-| `search` | `bfs`, `dfs`, `ucs`, `greedy`, `astar` (heuristic: `mst`, `maze`, `null`) | đứng yên |
+| `search` | `bfs`, `dfs`, `ucs`, `greedy`, `astar` (heuristic: `mst`, `maze`, `null`) | |
 | `adversarial` | `minimax`, `alphabeta` | đuổi theo Pacman (có xác suất đi ngẫu nhiên) |
 
 ## Yêu cầu
