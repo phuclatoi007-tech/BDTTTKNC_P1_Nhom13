@@ -115,4 +115,5 @@ Ván kết thúc khi: thắng (ăn hết thức ăn), thua (chạm Ghost), **b�
   số thức ăn còn lại, khoảng cách mê cung tới thức ăn gần nhất và phạt khi Ghost quá gần.
 
 # Hạn chế
-
+- Chưa xử lí các map với chi phí di chuyển đồng không đồng nhất.
+- Hàm đánh giá thuật toán đối kháng chưa tốt.
