@@ -1,5 +1,11 @@
 # Pacman AI - Nhóm 13
 
+# Thành viên 
+Cao Thế Nhật - 25022970
+Lê Minh Quân - 25022993
+Nguyễn Hoàng Phúc - 25022981
+Kiều Việt Tiến -25023025
+
 Trò chơi Pacman chạy trên terminal, có hai chế độ:
 
 | Chế độ | Thuật toán | Ghost |
@@ -9,7 +15,7 @@ Trò chơi Pacman chạy trên terminal, có hai chế độ:
 
 ## Yêu cầu
 
-- Python >= 3.8, **không cần cài thư viện ngoài** cho CLI (xem `requirements.txt`).
+- Python 3.12, **không cần cài thư viện ngoài** cho CLI (xem `requirements.txt`).
 - Terminal hỗ trợ mã màu ANSI để hiển thị màu (có thể tắt bằng `-nocolor`).
 - Cài đặt `pygame` nếu muốn sử dụng giao diện đồ họa Desktop GUI: `pip install pygame`.
 
@@ -58,7 +64,7 @@ python main.py -mode <mode_type> -map <map_url> -algo <algorithm> -heuristic <he
     # Các tham số khác không cần thiết phải điều chỉnh
 
 # Chạy thực nghiệm
-  # Chạy file run_experiments.py  
+  Chạy file run_experiments.py  
     
     # Trường hợp đặc biệt
     python main.py -mode search -map maps/map_co_ban.txt -algo bfs -ui cli
